@@ -1,41 +1,127 @@
 from random import randint, choice
 import re
 
-def roll_dice(dice_expression):
-    # Define a regular expression pattern to match dice expressions with optional negative bonus: 'NdM(+/-)B'
-    pattern = re.compile(r'(\d+)?d(\d+)([+-]\d+)?')
-    # Remove all whitespace
-    dice_expression_clean=re.sub(r"\s+", "", dice_expression)
-    # Attempt to match the regular expression to the given dice_expression
-    match = pattern.match(dice_expression_clean)
-    
-    if match:
-        # Extract the individual components of the dice expression
-        num_dice_str = match.group(1)
-        num_dice = int(num_dice_str) if num_dice_str else 1  # Default to 1 if not specified
-        dice_faces = int(match.group(2))  # Number of faces on each die (M)
-        # Check if there is a bonus specified; if not, default to 0        
-        bonus_str = match.group(3)
-        bonus = int(bonus_str) if bonus_str else 0
-        
-        # Roll the dice and calculate the total sum
-        roll_total=0
+def dice_choice():
+    try:
+        dice_expression=input("Input dice and modifier in the format NdM(+/-)B: ").lower()
+    except (ValueError): print(f"Invalid dice expression: {dice_expression}\nTry expressions like {randint(1, 20)}d{choice([4,6,8,10,12,20])}{choice(['+','-'])}{randint(1,20)}")
+    return dice_expression
+
+def roll_dice(dice_expression, explode, advantage, drop, reroll, pen):
+
+    def roller(num_dice, dice_faces, bonus_str, explode, advantage, drop, reroll, pen):
+        rolls=[]
+        reroll_count=0
         for _ in range(num_dice):
             roll=randint(1, dice_faces)
             print(roll)
-            roll_total+=roll
-        total=roll_total+bonus
-       # total = sum(randint(1, dice_faces) for _ in range(num_dice)) + bonus
+            rolls.append(roll)
+            if explode:
+                rerolls="explosions"
+                while roll== dice_faces:
+                    new_roll = randint(1, dice_faces)
+                    print(f"!!{new_roll}!!")
+                    reroll_count+=1
+                    rolls.append(new_roll)
+                    roll=new_roll
+            if reroll:
+                rerolls="rerolls"
+                while roll==1:
+                    rolls.pop()
+                    new_roll = randint(1, dice_faces)
+                    print(f"!!{new_roll}!!")
+                    reroll_count+=1
+                    rolls.append(new_roll)
+                    roll=new_roll
+            if pen:
+                rerolls="penetrations"
+                while roll== dice_faces:
+                    new_roll = randint(1, dice_faces)
+                    penetrating_die=new_roll-1
+                    print(f"!!{penetrating_die}!!")
+                    reroll_count+=1
+                    rolls.append(penetrating_die)
+                    roll=new_roll
+        if reroll_count>0:
+            print(f"\n{reroll_count} {rerolls}!")
+
+        dropped=0
+        if advantage==True or drop==True:
+            rolls.sort()
+            dropped=rolls.pop(0)
+        elif advantage==False or drop==False:
+            rolls.sort()
+            dropped=rolls.pop()      
+        if dropped>0:    
+            print(f"\n'{dropped}' dropped")
+            
+        total=sum(rolls)
+
         
-        # Return the total sum as the result of the dice roll
+        if bonus_str:
+
+            bonus_operator = bonus_str[0]
+            bonus_value = int(bonus_str[1:])
+            
+            if bonus_operator == '+':
+                total += bonus_value
+            elif bonus_operator == '-':
+                total -= -bonus_value
+            elif bonus_operator == '*':
+                total *= bonus_value
+            elif bonus_operator == '/':
+                total //= bonus_value
+            else:
+                raise ValueError("Invalid bonus operator: " + dice_expression)
+            return total
+        else:
+            return total
+
+    pattern = re.compile(r'(\d+)?d(\d+)([*\/+-]\d+)?')
+    dice_expression_clean=re.sub(r"\s+", "", dice_expression)
+    matches = pattern.findall(dice_expression_clean)
+    total=0  
+
+    for match in matches:
+        num_dice_str = match[0]
+        num_dice = int(num_dice_str) if num_dice_str else 1
+        if advantage is not None:
+            num_dice=2
+        dice_faces = int(match[1])    
+        bonus_str = match[2]
+
+        subtotal=roller(num_dice, dice_faces, bonus_str, explode, advantage, drop, reroll, pen)
+        total+=subtotal
         return total
     else:
-        # If the dice expression is not in the correct format, raise a ValueError
         raise ValueError("Invalid dice expression: " + dice_expression)
+
+def options():
+    advantage=None
+    explode=False
+    drop=None
+    reroll=False
+    pen=False
+    adv_dis=input("(a)dvantage? (d)isadvantage? (e)xploding? Drop (l)owest? Drop (h)ighest? (r)e-roll 1s? (p)enetrating? [enter to skip]: ").lower().strip()
+    if adv_dis=="a":
+        advantage=True
+    elif adv_dis=="d":
+        advantage=False
+    elif adv_dis=="e":
+        explode=True
+    elif adv_dis=="l":
+        drop=True
+    elif adv_dis=="h":
+        drop=False
+    elif adv_dis=="r":
+        reroll=True
+    elif adv_dis=="p":
+        pen=True
     
+    return advantage, explode, drop, reroll, pen
+
 while True:
-    try:
-        dice_expression=input("Input dice and modifier in the format NdM(+/-)B: ").lower()
-        total=roll_dice(dice_expression)
-        print(f"Total: {total}")
-    except (ValueError): print(f"Invalid dice expression: {dice_expression}\nTry expressions like {randint(1, 20)}d{choice([4,6,8,10,12,20])}{choice(['+','-'])}{randint(1,20)}")
+    dice_expression=dice_choice()
+    advantage, explode, drop, reroll, pen=options()
+    total=roll_dice(dice_expression, explode, advantage, drop, reroll, pen)
+    print(f"\nTotal: {total}\n")
