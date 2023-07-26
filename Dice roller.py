@@ -2,16 +2,15 @@ from random import randint, choice
 import re
 
 def dice_choice():
-    try:
-        dice_expression=input("Input dice and modifier in the format NdM(+/-)B: ").lower()
-    except (ValueError): print(f"Invalid dice expression: {dice_expression}\nTry expressions like {randint(1, 20)}d{choice([4,6,8,10,12,20])}{choice(['+','-'])}{randint(1,20)}")
+    dice_expression=input("Input dice and modifier in the format NdM(+/-)B: ").lower()
     return dice_expression
 
-def roll_dice(dice_expression, explode, advantage, drop, reroll, pen):
+def roll_dice():
 
     def roller(num_dice, dice_faces, bonus_str, explode, advantage, drop, reroll, pen):
         rolls=[]
         reroll_count=0
+        rerolls=None
         for _ in range(num_dice):
             roll=randint(1, dice_faces)
             print(roll)
@@ -76,26 +75,29 @@ def roll_dice(dice_expression, explode, advantage, drop, reroll, pen):
             return total
         else:
             return total
+    while True:
+        dice_expression=dice_choice()
+        pattern = re.compile(r'(\d+)?d(\d+)([*\/+-]\d+)?')
+        dice_expression_clean=re.sub(r"\s+", "", dice_expression)
+        matches = pattern.findall(dice_expression_clean)
+        total=0
+        if matches:
+            advantage, explode, drop, reroll, pen=options()
 
-    pattern = re.compile(r'(\d+)?d(\d+)([*\/+-]\d+)?')
-    dice_expression_clean=re.sub(r"\s+", "", dice_expression)
-    matches = pattern.findall(dice_expression_clean)
-    total=0  
+            for match in matches:
+                num_dice_str = match[0]
+                num_dice = int(num_dice_str) if num_dice_str else 1
+                if advantage is not None:
+                    num_dice=2
+                dice_faces = int(match[1])    
+                bonus_str = match[2]
 
-    for match in matches:
-        num_dice_str = match[0]
-        num_dice = int(num_dice_str) if num_dice_str else 1
-        if advantage is not None:
-            num_dice=2
-        dice_faces = int(match[1])    
-        bonus_str = match[2]
-
-        subtotal=roller(num_dice, dice_faces, bonus_str, explode, advantage, drop, reroll, pen)
-        total+=subtotal
-        return total
-    else:
-        raise ValueError("Invalid dice expression: " + dice_expression)
-
+                subtotal=roller(num_dice, dice_faces, bonus_str, explode, advantage, drop, reroll, pen)
+                total+=subtotal
+            print(f"\nTotal: {total}\n")
+            return total
+        else: print(f"\nInvalid dice expression: {dice_expression}\nTry expressions like: {randint(1, 10)}d{choice([4, 6, 8, 10, 12, 20])} {choice(['+', '-', '/', '*'])}{randint(1, 10)}\n")
+    
 def options():
     advantage=None
     explode=False
@@ -120,8 +122,4 @@ def options():
     
     return advantage, explode, drop, reroll, pen
 
-while True:
-    dice_expression=dice_choice()
-    advantage, explode, drop, reroll, pen=options()
-    total=roll_dice(dice_expression, explode, advantage, drop, reroll, pen)
-    print(f"\nTotal: {total}\n")
+roll_dice()
