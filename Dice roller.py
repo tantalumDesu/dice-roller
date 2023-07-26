@@ -121,5 +121,5 @@ def options():
         pen=True
     
     return advantage, explode, drop, reroll, pen
-
-roll_dice()
+while True:
+    roll_dice()
